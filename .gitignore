@@ -1,0 +1,13 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Firebase
+.firebase/
+*.log
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
