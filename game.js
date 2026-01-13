@@ -58,10 +58,9 @@ let filteredCountries = [];
 let worldGeoJSON = null;
 let targetCountry = null;
 
-let selectedHighlighter = [];
-let hoverHighlighter = [];
-let selectionDot = null; 
-let userGuessedLatLon = null;
+let selectedHighlighter = []; 
+let wrongHighlighter = [];    
+let hoverHighlighter = [];    
 let resultLine = null;
 let targetDot = null;
 
@@ -76,9 +75,11 @@ let currentContinent = 'World';
 let isSpinning = false;
 let lastHoveredCountry = null; 
 
+// *** NEW VAR *** : เช็คว่าอยู่หน้า Main Menu ไหม
+let isMainMenu = true; 
+
 document.getElementById('high-score-display').textContent = highScore;
 
-// Export function to window so HTML can see it
 window.selectContinent = (region) => startWithContinent(region);
 
 // --- Three.js Setup ---
@@ -99,6 +100,8 @@ controls.addEventListener('end', () => renderer.domElement.style.cursor = 'cross
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const sunLight = new THREE.DirectionalLight(0xffaa00, 1.5);
 sunLight.position.set(50, 20, 50); scene.add(sunLight);
+
+// Stars
 const starGeo = new THREE.BufferGeometry();
 const starPos = new Float32Array(3000 * 3);
 for(let i=0; i<9000; i++) starPos[i] = (Math.random()-0.5)*600;
@@ -118,13 +121,6 @@ const earth = new THREE.Mesh(
 );
 earthGroup.add(earth);
 earthGroup.add(new THREE.Mesh(new THREE.SphereGeometry(10.3, 64, 64), new THREE.MeshPhongMaterial({ color: 0xffaa00, transparent: true, opacity: 0.1, side: THREE.BackSide, blending: THREE.AdditiveBlending })));
-
-// Tiny Dot (Selection Marker)
-const dotGeo = new THREE.SphereGeometry(0.08, 16, 16);
-const dotMat = new THREE.MeshBasicMaterial({ color: 0xff3300 }); // Red Laser Dot
-selectionDot = new THREE.Mesh(dotGeo, dotMat);
-earthGroup.add(selectionDot);
-selectionDot.visible = false;
 
 // --- Interaction ---
 const raycaster = new THREE.Raycaster();
@@ -168,19 +164,41 @@ function processClick(clientX, clientY) {
     if (intersects.length > 0) {
         const point = intersects[0].point;
         const localPoint = earthGroup.worldToLocal(point.clone());
-        localPoint.normalize().multiplyScalar(10.05); // Surface
+        const latLon = vector3ToLatLon(localPoint.x, localPoint.y, localPoint.z);
+        const clickedCountryName = findCountryAt(latLon.lat, latLon.lon);
         
-        // Show tiny selection dot
-        selectionDot.position.copy(localPoint);
-        selectionDot.visible = true;
-        
-        // Store logic
-        userGuessedLatLon = vector3ToLatLon(localPoint.x, localPoint.y, localPoint.z);
-        
-        // UI
-        playSound('click');
-        document.getElementById('btn-confirm').style.display = 'inline-block';
-        document.getElementById('result-text').textContent = "Position Selected. Confirm?";
+        if (clickedCountryName) {
+            clearInterval(timerInterval);
+            isGameActive = false;
+            
+            if (clickedCountryName === targetCountry.name) {
+                score += 100; streak++;
+                playSound('win');
+                document.getElementById('result-text').innerHTML = `<span class="score-plus">CORRECT! 🎉 +100</span>`;
+                highlightTargetBorder(targetCountry.name);
+            } else {
+                score -= 10; streak = 0;
+                playSound('wrong');
+                document.getElementById('result-text').innerHTML = `<span class="score-minus">WRONG! It was ${targetCountry.name}</span>`;
+                drawBorder(clickedCountryName, 0xff0000, 2, 10.06, wrongHighlighter);
+                highlightTargetBorder(targetCountry.name);
+                const clickedCountryData = allCountriesData.find(c => c.name === clickedCountryName);
+                if (clickedCountryData) {
+                    const startVec = latLonToVector3(clickedCountryData.lat, clickedCountryData.lon, 10.05);
+                    drawResultLine(startVec, targetCountry);
+                }
+            }
+
+            document.getElementById('score-display').textContent = score;
+            document.getElementById('high-score-display').textContent = Math.max(score, highScore);
+            localStorage.setItem('earthGameHighScore', Math.max(score, highScore));
+            document.getElementById('streak-display').textContent = `🔥 STREAK x${streak}`;
+            document.getElementById('streak-display').style.opacity = 1;
+
+            showEndRound();
+        } else {
+            document.getElementById('result-text').textContent = "That's the ocean! Try clicking land.";
+        }
     }
 }
 
@@ -207,11 +225,6 @@ function findCountryAt(lat, lon) {
         if (feature.geometry.type === "MultiPolygon") for (let poly of feature.geometry.coordinates) if (isPointInPoly(lon, lat, poly[0])) return feature.properties.name;
     }
     return null;
-}
-function getDistanceFromLatLonInKm(lat1,lon1,lat2,lon2) {
-    const R = 6371; const dLat = (lat2-lat1)*(Math.PI/180); const dLon = (lon2-lon1)*(Math.PI/180);
-    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*(Math.PI/180))*Math.cos(lat2*(Math.PI/180))*Math.sin(dLon/2)*Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 function getCenterOfGeoJson(geometry) {
     let coords = (geometry.type === "Polygon") ? geometry.coordinates[0] : geometry.coordinates.sort((a,b)=>b[0].length-a[0].length)[0][0];
@@ -244,10 +257,10 @@ function highlightHoverBorder(countryName) { clearHover(); drawBorder(countryNam
 function clearHover() { hoverHighlighter.forEach(o => earthGroup.remove(o)); hoverHighlighter = []; lastHoveredCountry = null; }
 function clearVisuals() {
     selectedHighlighter.forEach(o => earthGroup.remove(o)); selectedHighlighter = [];
+    wrongHighlighter.forEach(o => earthGroup.remove(o)); wrongHighlighter = [];
     hoverHighlighter.forEach(o => earthGroup.remove(o)); hoverHighlighter = [];
     if(resultLine) earthGroup.remove(resultLine);
     if(targetDot) earthGroup.remove(targetDot);
-    selectionDot.visible = false;
 }
 
 // --- Logic Flow ---
@@ -270,6 +283,7 @@ fetch('https://raw.githubusercontent.com/johan/world.geo.json/master/countries.g
 
 function preSelectMode(mode) {
     initAudio();
+    isMainMenu = false; // *** Stop Auto Rotation when mode selected
     currentMode = mode;
     document.getElementById('btn-group').style.display = 'none';
     document.getElementById('continent-selection').style.display = 'grid';
@@ -278,6 +292,8 @@ function preSelectMode(mode) {
 
 function startWithContinent(region) {
     currentContinent = region;
+    document.getElementById('continent-badge').style.display = 'block';
+    document.getElementById('current-continent-text').textContent = region.toUpperCase();
     document.getElementById('continent-selection').style.display = 'none';
     
     if (region === 'World') filteredCountries = [...allCountriesData];
@@ -293,7 +309,8 @@ function startWithContinent(region) {
 function startGameLogic() {
     clearVisuals();
     isSpinning = true; isGameActive = false;
-    document.getElementById('btn-next').style.display = 'none';
+    
+    document.getElementById('end-round-controls').style.display = 'none';
     document.getElementById('country-input').style.display = 'none';
     document.getElementById('target-display').style.display = 'none';
     document.getElementById('btn-confirm').style.display = 'none';
@@ -303,26 +320,32 @@ function startGameLogic() {
     targetCountry = filteredCountries[Math.floor(Math.random() * filteredCountries.length)];
 
     if (currentMode === 'clicking') {
-        // --- PRECISION MODE ---
         document.getElementById('target-display').style.display = 'block';
         document.getElementById('result-text').textContent = `SCANNING ${currentContinent.toUpperCase()} REGION...`;
         
-        let shuffleTime = 0; const maxTime = 1500; 
-        const textInterval = setInterval(() => {
-            shuffleTime += 50;
+        let currentSpeed = 50;  
+        const slowDownFactor = 1.15; 
+        const maxSpeed = 800;   
+
+        const rouletteLoop = () => {
             let rndName = filteredCountries[Math.floor(Math.random() * filteredCountries.length)].name;
             document.getElementById('target-display').textContent = `❓ ${rndName}`;
-            playSound('spin'); 
-            
-            if (shuffleTime >= maxTime) { 
-                clearInterval(textInterval); isSpinning = false; 
+            playSound('spin');
+
+            currentSpeed = currentSpeed * slowDownFactor;
+
+            if (currentSpeed < maxSpeed) {
+                setTimeout(rouletteLoop, currentSpeed);
+            } else {
+                isSpinning = false;
                 document.getElementById('target-display').textContent = `🎯 ${targetCountry.name}`;
-                readyToPlay(); 
+                playSound('click');
+                readyToPlay();
             }
-        }, 60);
+        };
+        rouletteLoop();
 
     } else {
-        // --- TYPING MODE ---
         controls.enabled = false; playSound('spin');
         const duration = 2500; const startT = Date.now();
         const startY = earthGroup.rotation.y; const startX = earthGroup.rotation.x;
@@ -349,7 +372,7 @@ function readyToPlay() {
         document.getElementById('country-input').focus();
         highlightTargetBorder(targetCountry.name);
     } else {
-        document.getElementById('result-text').textContent = "Locate & Click on the map!";
+        document.getElementById('result-text').textContent = "Click the highlighted country!";
         document.getElementById('target-display').style.color = "#ffcc00";
     }
 }
@@ -370,79 +393,63 @@ function startTimer() {
             score -= 5; streak = 0;
             playSound('wrong');
             document.getElementById('result-text').innerHTML = `<span class="score-minus">TIME'S UP! ⏳ ${targetCountry.name}</span>`;
-            showEndRound();
+            
             highlightTargetBorder(targetCountry.name);
+            showEndRound();
         }
     }, 1000);
 }
 
-// --- Logic: Distance Confirm (Score Max 100) ---
-document.getElementById('btn-confirm').addEventListener('click', () => {
-    if(!userGuessedLatLon || !targetCountry) return;
-    clearInterval(timerInterval);
-    isGameActive = false;
-    document.getElementById('btn-confirm').style.display = 'none';
-
-    // Distance Calc
-    const dist = getDistanceFromLatLonInKm(userGuessedLatLon.lat, userGuessedLatLon.lon, targetCountry.lat, targetCountry.lon);
-    
-    // SCORE CALCULATION (MAX 100)
-    let roundScore = Math.round(100 * Math.exp(-dist / 3000));
-    if(dist < 50) roundScore = 100;
-
-    score += roundScore;
-    streak++; 
-    
-    document.getElementById('score-display').textContent = score;
-    document.getElementById('high-score-display').textContent = Math.max(score, highScore);
-    localStorage.setItem('earthGameHighScore', Math.max(score, highScore));
-    document.getElementById('streak-display').textContent = `🔥 STREAK x${streak}`;
-    document.getElementById('streak-display').style.opacity = 1;
-    
-    playSound('win');
-    document.getElementById('result-text').innerHTML = `
-        <span class="distance-stat">Error: ${Math.round(dist).toLocaleString()} km</span>
-        <span class="score-plus">+${roundScore} Points!</span>
-    `;
-
-    drawResultLine(selectionDot.position, targetCountry);
-    showEndRound();
-});
-
 function drawResultLine(startVec3, targetData) {
     const targetVec3 = latLonToVector3(targetData.lat, targetData.lon, 10.05);
-    
-    // Draw Target Dot
     const dotGeo = new THREE.SphereGeometry(0.1, 16, 16);
     const dotMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
     targetDot = new THREE.Mesh(dotGeo, dotMat);
     targetDot.position.copy(targetVec3);
     earthGroup.add(targetDot);
     
-    // Draw Line
     const points = [];
     for(let i=0; i<=20; i++) {
         const p = i/20;
         const v = new THREE.Vector3().lerpVectors(startVec3, targetVec3, p);
-        v.normalize().multiplyScalar(10.05 + Math.sin(p*Math.PI)*2); // Arc
+        v.normalize().multiplyScalar(10.05 + Math.sin(p*Math.PI)*2);
         points.push(v);
     }
     const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
     const lineMat = new THREE.LineBasicMaterial({ color: 0xffff00 });
     resultLine = new THREE.Line(lineGeo, lineMat);
     earthGroup.add(resultLine);
-    
-    highlightTargetBorder(targetData.name);
 }
 
 function showEndRound() {
     isGameActive = false;
     document.getElementById('country-input').style.display = 'none';
-    document.getElementById('btn-next').style.display = 'inline-block';
+    document.getElementById('end-round-controls').style.display = 'flex';
     document.getElementById('btn-next').focus();
 }
 
-// Typing logic (Max 100)
+function resetToMenu() {
+    isMainMenu = true; // *** Start Auto Rotation again
+    clearInterval(timerInterval);
+    isGameActive = false;
+    isSpinning = false;
+    clearVisuals();
+    
+    document.getElementById('end-round-controls').style.display = 'none';
+    document.getElementById('target-display').style.display = 'none';
+    document.getElementById('country-input').style.display = 'none';
+    document.getElementById('continent-badge').style.display = 'none';
+    document.getElementById('timer-bar-container').style.display = 'none';
+    
+    document.getElementById('continent-selection').style.display = 'none';
+    
+    document.getElementById('result-text').textContent = '';
+    document.getElementById('status-bar').textContent = "SYSTEM READY. SELECT MODULE.";
+    controls.reset();
+    
+    document.getElementById('btn-group').style.display = 'flex';
+}
+
 document.getElementById('country-input').addEventListener('keyup', (e) => {
     if(e.key === 'Enter') {
         if(e.target.value.trim().toLowerCase() === targetCountry.name.toLowerCase()) {
@@ -461,6 +468,7 @@ document.getElementById('country-input').addEventListener('keyup', (e) => {
 document.getElementById('btn-mode-type').addEventListener('click', () => preSelectMode('typing'));
 document.getElementById('btn-mode-click').addEventListener('click', () => preSelectMode('clicking'));
 document.getElementById('btn-next').addEventListener('click', startGameLogic);
+document.getElementById('btn-exit').addEventListener('click', resetToMenu);
 
 document.getElementById('zoom-in').addEventListener('click', () => manualZoom('in'));
 document.getElementById('zoom-out').addEventListener('click', () => manualZoom('out'));
@@ -471,6 +479,18 @@ function manualZoom(dir) {
         camera.position.copy(controls.target).add(vec);
 }
 
-function animate() { requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+// *** UPDATED ANIMATION LOOP ***
+function animate() { 
+    requestAnimationFrame(animate); 
+    
+    // Auto Rotate if in Main Menu
+    if (isMainMenu) {
+        earthGroup.rotation.y += 0.001; // Adjust speed (0.001 is slow and nice)
+    }
+
+    controls.update(); 
+    renderer.render(scene, camera); 
+}
 animate();
+
 window.addEventListener('resize', () => { camera.aspect=window.innerWidth/window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth,window.innerHeight); });

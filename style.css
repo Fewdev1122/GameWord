@@ -1,97 +1,97 @@
-body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #020205; color: white; user-select: none; }
+body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #020205; color: white; }
 
-canvas { display: block; cursor: crosshair; }
-canvas:active { cursor: grabbing; }
+/* --- UI Positions --- */
 
-/* --- Score Board --- */
-#score-board {
-    position: absolute; top: 20px; left: 20px; z-index: 20;
-    background: rgba(0, 0, 0, 0.7); padding: 15px 25px;
-    border-radius: 12px; border-left: 5px solid #ffcc00;
-    backdrop-filter: blur(5px); pointer-events: none;
+/* Badge ขวาบน */
+#continent-badge {
+    position: absolute; 
+    top: 20px; 
+    right: 20px; 
+    text-align: right;
+    background: rgba(0, 0, 0, 0.6); 
+    border: 1px solid #00ff88;
+    color: #00ff88; 
+    padding: 8px 15px; 
+    border-radius: 8px;
+    font-size: 0.9rem; 
+    font-weight: bold; 
+    letter-spacing: 1px;
+    display: none;
+    z-index: 20;
 }
-.score-item { font-size: 1.1rem; margin-bottom: 5px; color: #ccc; }
-.big-score { font-size: 1.8rem; font-weight: bold; color: #ffcc00; }
-.streak-box { color: #ff5500; font-weight: bold; margin-top: 5px; opacity: 0; transition: opacity 0.3s; font-size: 1.2rem; }
 
-/* --- Zoom Controls --- */
-#zoom-controls {
-    position: absolute; bottom: 30px; right: 30px; z-index: 20;
-    display: flex; flex-direction: column; gap: 10px;
+/* Target Display ลอยด้านบนสุด */
+#target-display { 
+    position: absolute;
+    top: 100px; /* ระยะห่างจากด้านบน */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    text-align: center;
+    font-size: 2.5rem; 
+    font-weight: bold; 
+    display: none; 
+    text-shadow: 0 0 15px rgba(0,0,0,1);
+    pointer-events: none;
+    z-index: 15;
 }
-.zoom-btn {
-    width: 50px; height: 50px; border-radius: 50%;
-    background: rgba(40, 45, 50, 0.9); border: 2px solid #555;
-    color: white; font-size: 1.8rem; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: 0.2s; box-shadow: 0 0 10px rgba(0,0,0,0.5);
-}
-.zoom-btn:hover { background: #ffcc00; color: black; border-color: #ffcc00; transform: scale(1.1); }
-.zoom-btn:active { transform: scale(0.95); }
 
-/* --- Main UI --- */
+/* Main UI Container ขยับลงมาด้านล่าง */
 #ui-container {
-    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-    z-index: 10; text-align: center;
-    background: rgba(20, 25, 30, 0.95); padding: 30px;
-    border-radius: 20px; box-shadow: 0 0 40px rgba(255, 200, 0, 0.15);
-    border: 1px solid rgba(255, 200, 0, 0.2); width: 450px;
-    backdrop-filter: blur(10px);
-    transition: height 0.3s;
+    position: absolute; 
+    top: 65%; 
+    left: 50%; 
+    transform: translate(-50%, -50%);
+    text-align: center; 
+    pointer-events: none; 
+    width: 100%; 
+    max-width: 500px; 
+    z-index: 10;
 }
+#ui-container > * { pointer-events: auto; }
 
-h1 { margin: 0 0 5px 0; font-size: 1.8rem; color: #ffcc00; text-transform: uppercase; letter-spacing: 2px; }
+/* --- General Styles --- */
+h1 { text-shadow: 0 0 10px cyan; margin-bottom: 5px; font-size: 2rem; }
+.btn-sub { display: block; font-size: 0.8rem; opacity: 0.7; margin-top: 2px; }
 
-#timer-bar-container {
-    width: 100%; height: 10px; background: #444; margin-top: 20px;
-    border-radius: 5px; overflow: hidden; display: none;
-}
-#timer-bar { width: 100%; height: 100%; background: #00ff88; transition: width 1s linear; }
+/* Buttons */
+button { background: #222; color: #fff; border: 1px solid #555; padding: 12px 20px; font-size: 1rem; cursor: pointer; border-radius: 8px; transition: 0.2s; margin: 5px; }
+button:hover:not(:disabled) { background: #444; border-color: #fff; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-blue { background: linear-gradient(135deg, #0044cc, #0088ff); border: none; }
+.btn-blue:hover { background: linear-gradient(135deg, #0055dd, #0099ff); transform: scale(1.05); }
 
-.control-group { margin-top: 25px; display: flex; justify-content: center; gap: 12px; }
+/* Main Menu Button Group */
+#btn-group { display: flex; justify-content: center; gap: 10px; width: 100%; }
 
-/* Continent Grid */
-#continent-selection {
-    display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;
-}
-.btn-continent {
-    background: rgba(255, 255, 255, 0.1); border: 1px solid #444; font-size: 0.9rem; padding: 12px; color: #ccc;
-}
-.btn-continent:hover { background: #ffcc00; color: black; border-color: #ffcc00; }
-.btn-global { grid-column: span 2; background: linear-gradient(90deg, #ffcc00, #ff8800); color: black; border: none; }
+/* End Round Controls */
+#end-round-controls { display: flex; justify-content: center; width: 80%; margin: 15px auto 0; gap: 10px; }
+.btn-primary { flex: 2; background: linear-gradient(135deg, #00ff88, #00aa55); color: #003311; border: none; font-weight: bold; }
+.btn-primary:hover { transform: scale(1.05); box-shadow: 0 0 15px #00ff88; }
+.btn-secondary { flex: 1; background: #333; color: #aaa; border: 1px solid #555; }
+.btn-secondary:hover { background: #cc0000; color: white; border-color: #ff0000; }
 
-input {
-    padding: 14px; width: 80%; border: 2px solid #555; background: #111; color: #fff;
-    border-radius: 10px; margin-top: 20px; display: none; outline: none;
-    text-align: center; font-size: 1.2rem;
-}
+/* Grid Continent */
+#continent-selection { display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; width: 80%; margin-left: auto; margin-right: auto; }
+.btn-continent { width: 100%; margin: 0; padding: 10px; font-size: 0.9rem; background: rgba(0,0,0,0.5); border: 1px solid #444; color: #ccc; }
+.btn-continent:hover { background: #ffcc00; color: #000; border-color: #ffcc00; }
+.btn-global { grid-column: span 2; background: linear-gradient(90deg, #ffcc00, #ff8800); color: black; border: none; font-weight: bold; }
+
+/* Score Board */
+#score-board { position: absolute; top: 20px; left: 20px; text-align: left; z-index: 10; }
+.big-score { font-size: 2rem; color: #ffcc00; font-weight: bold; text-shadow: 0 0 10px #ffaa00; display: block; }
+.streak-box { margin-top: 5px; background: #ff3300; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; display: inline-block; opacity: 0; transition: 0.3s; }
+
+/* Timer & Inputs */
+#timer-bar-container { width: 100%; height: 5px; background: #333; margin-bottom: 15px; display: none; position: relative; overflow: hidden; border-radius: 5px; }
+#timer-bar { height: 100%; background: #00ff88; width: 100%; transition: width 1s linear; }
+input { padding: 14px; width: 80%; border: 2px solid #555; background: #111; color: #fff; border-radius: 10px; margin-top: 20px; display: none; outline: none; text-align: center; font-size: 1.2rem; }
 input:focus { border-color: #ffcc00; }
+#result-text { margin-top: 15px; font-size: 1.2rem; font-weight: bold; min-height: 1.5em; text-shadow: 0 0 5px black; }
+.score-plus { color: #00ff88; text-shadow: 0 0 10px #00ff88; }
+.score-minus { color: #ff3300; text-shadow: 0 0 10px #ff3300; }
 
-button {
-    padding: 15px 10px; 
-    background: linear-gradient(135deg, #ffb300, #ff6600);
-    color: #1a0500; border: none; border-radius: 8px; cursor: pointer;
-    font-size: 1rem; font-weight: 900; flex: 1; transition: 0.2s;
-    text-transform: uppercase; letter-spacing: 1px;
-    box-shadow: 0 4px 15px rgba(255, 100, 0, 0.3);
-}
-button:hover { transform: translateY(-2px); filter: brightness(1.2); box-shadow: 0 6px 20px rgba(255, 100, 0, 0.5); }
-button:disabled { background: #333; color: #666; cursor: not-allowed; transform: none; filter: none; box-shadow: none; }
-
-.btn-blue { background: linear-gradient(135deg, #00d2ff, #0051ff); color: white; box-shadow: 0 4px 15px rgba(0, 100, 255, 0.3); }
-.btn-blue:hover { box-shadow: 0 6px 20px rgba(0, 100, 255, 0.5); }
-
-.btn-confirm { 
-    background: linear-gradient(135deg, #00ff88, #00aa55); color: #003311; 
-    box-shadow: 0 4px 15px rgba(0, 255, 100, 0.3);
-    display: none; width: 100%; margin-top: 15px; 
-}
-
-.btn-sub { font-size: 0.75rem; font-weight: normal; display: block; opacity: 0.8; margin-top: 3px; text-transform: none; letter-spacing: 0; }
-
-#result-text { margin-top: 15px; min-height: 28px; font-weight: bold; font-size: 1.1rem; }
-#target-display { margin-top: 15px; font-size: 1.6rem; color: #00ffcc; font-weight: bold; display: none; min-height: 40px; text-shadow: 0 0 10px rgba(0,255,200,0.5); }
-
-.score-plus { color: #00ff88; }
-.score-minus { color: #ff4444; }
-.distance-stat { color: #ff5555; display: block; margin-top: 5px; font-size: 1.2rem; }
+/* Zoom */
+#zoom-controls { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 5px; z-index: 20; }
+.zoom-btn { width: 40px; height: 40px; background: rgba(30,30,30,0.8); color: white; border: 1px solid #555; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; cursor: pointer; user-select: none; }
+.zoom-btn:hover { background: #444; }
